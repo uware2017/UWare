@@ -3,6 +3,7 @@ package test;
 import java.lang.ref.SoftReference;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -105,14 +106,22 @@ public class Simulator {
 			
 			fCbC = ClientExtension.encrypt(fKcK, file.getData());
 			
-			fCT = ClientExtension.genTag(fCbC);
+			fCT = ClientExtension.genStarTag(fCbC, initResult.getrStar().toByteArray());
 			
-			proof = new PoWProof(fCT, null);
+		    List<Byte> fCbcList = new ArrayList<Byte>(fCbC.length);
+		    for(byte b: fCbC)
+		    {
+		    	fCbcList.add(b);
+		    }
+
+			proof = new PoWProof(fCT, fCbcList, null, null);
 		} else if (user.getEngine() == DedupEngine.SimilarityBasedDualLevel) {
 			
 			bCTs = new ArrayList<BigInteger>(file.numOfBlock());
 			
 			blockIter = file.blockIterator();
+			
+			List<List<Byte>> bCbcLists = new ArrayList<List<Byte>>();
 			
 			while (blockIter.hasNext()) {
 				
@@ -122,10 +131,18 @@ public class Simulator {
 				
 				fCbC = ClientExtension.encrypt(fKcK, blockData);
 				
-				bCTs.add(ClientExtension.genTag(fCbC));
+				bCTs.add(ClientExtension.genStarTag(fCbC, initResult.getrStar().toByteArray()));
+				
+			    List<Byte> bCbcList = new ArrayList<Byte>(fCbC.length);
+			    for(byte b: fCbC)
+			    {
+			    	bCbcList.add(b);
+			    }
+			    
+			    bCbcLists.add(bCbcList);
 			}
 			
-			proof = new PoWProof(null, bCTs);
+			proof = new PoWProof(null, null, bCTs, bCbcLists);
 		}
 		
 		long cTime2 = System.nanoTime() - cTime2s;
@@ -260,6 +277,8 @@ public class Simulator {
 		
 		blockIter = file.blockIterator();
 		
+		List<List<Byte>> bCbcLists = new ArrayList<List<Byte>>();
+		
 		int i = 0;
 		while (blockIter.hasNext()) {
 			
@@ -269,12 +288,20 @@ public class Simulator {
 			
 			fCbC = new SoftReference<byte[]>(ClientExtension.encrypt(fKcK.get(), blockData));
 			
-			bCTs.get().add(ClientExtension.genTag(fCbC.get()));
+			bCTs.get().add(ClientExtension.genStarTag(fCbC.get(), initResults.get(i).getrStar().toByteArray()));
 			
 			i++;
+			
+		    List<Byte> bCbcList = new ArrayList<Byte>(fCbC.get().length);
+		    for(byte b: fCbC.get())
+		    {
+		    	bCbcList.add(b);
+		    }
+		    
+		    bCbcLists.add(bCbcList);
 		}
 		
-		proof = new SoftReference<PoWProof>(new PoWProof(null, bCTs.get()));
+		proof = new SoftReference<PoWProof>(new PoWProof(null, null, bCTs.get(), bCbcLists));
 		
 		long cTime2 = System.nanoTime() - cTime2s;
 		
@@ -430,7 +457,8 @@ public class Simulator {
 			bCTs.add(ClientExtension.genTag(fCbC));
 		}
 
-		proof = new PoWProof(null, bCTs);
+		// TODO case four do not use rStar
+		proof = new PoWProof(null, null, bCTs, null);
 
 		long cTime2 = System.nanoTime() - cTime2s;
 

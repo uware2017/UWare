@@ -10,6 +10,16 @@ public class InitResult {
 
 	private BigInteger r;
 	
+	private BigInteger rStar;
+	
+	public BigInteger getrStar() {
+		return rStar;
+	}
+
+	public void setrStar(BigInteger rStar) {
+		this.rStar = rStar;
+	}
+
 	private FileStatus fileStatus;
 	
 	private Set<Long> fidSet;

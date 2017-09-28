@@ -101,6 +101,7 @@ public class UWareDedup {
 		InitResult initResult = null;
 		
 		BigInteger r = fTIndex.getR(fT);
+		
 		FileStatus fileStatus = FileStatus.Fresh;
 		Set<Long> fidSet = null;
 		
@@ -122,7 +123,10 @@ public class UWareDedup {
 			}
 		}
 		
+		BigInteger rStar = new BigInteger(Constant.rLen, rnd);
+		
 		initResult = new InitResult(r, fileStatus, fidSet);
+		initResult.setrStar(rStar);
 		
 		return initResult;
 	}
@@ -162,7 +166,9 @@ public class UWareDedup {
 			}
 		}
 		
+		BigInteger rStar = new BigInteger(Constant.rLen, rnd);
 		initResult = new InitResult(r, fileStatus, fidSet);
+		initResult.setrStar(rStar);
 		
 		return initResult;
 	}
@@ -309,10 +315,10 @@ public class UWareDedup {
 
 		switch (dedupEngine) {
 		case FileLevel:
-			finalResult = dedupFinalCaseOne(proof.getfCT(), initQuery, initResult);
+			finalResult = dedupFinalCaseOne(proof, initQuery, initResult);
 			break;
 		case SimilarityBasedDualLevel:
-			finalResult = dedupFinalCaseThree(proof.getbCTs(), initQuery, initResult);
+			finalResult = dedupFinalCaseThree(proof, initQuery, initResult);
 			break;
 		case PerBlockRandomness:
 			finalResult = dedupFinalCaseFour(proof.getbCTs(), initQuery, initResult);
@@ -345,13 +351,12 @@ public class UWareDedup {
 			FileStatus fileStatus = initResults.get(i).getFileStatus();
 			
 			if (initResults.get(i).getFileStatus() == FileStatus.Fresh) {
-				
-				
-				
+
 				bid = UWareDedup.newBid++;
 				
 				// update the DB table
-				UWareDB.FCTTable.put(bid, bCT);
+				//UWareDB.FCTTable.put(bid, bCT);
+				UWareDB.FencTable.put(bid, proof.getbEncs().get(i));
 				
 				// update the FTIndex
 				fTIndex.updateIndex(initQuery.getbTs().get(i), initResults.get(i).getR(), bid);
@@ -363,8 +368,18 @@ public class UWareDedup {
 				
 				for (Long testingBid : bidSet) {
 					
-					if (bCT.equals(UWareDB.FCTTable.get(testingBid))) {
-						
+					//compute BCT with rStar
+					BigInteger rStar = initResults.get(i).getrStar();
+					List<Byte> benc = UWareDB.FencTable.get(testingBid);
+					byte[] bbytes = new byte[benc.size()];
+					for(int k=0; k<benc.size(); k++)
+					{
+						bbytes[k] = benc.get(k);
+					}
+					BigInteger serverBCT = ClientExtension.genStarTag(bbytes, rStar.toByteArray());
+					
+					if (bCT.equals(serverBCT)) {
+					//if (true) {	
 						bid = testingBid;
 						fileStatus = FileStatus.Duplicate;
 						duplicated = true;
@@ -377,7 +392,8 @@ public class UWareDedup {
 					bid = UWareDedup.newBid++;
 					
 					// update the DB table
-					UWareDB.FCTTable.put(bid, bCT);
+					//UWareDB.FCTTable.put(bid, bCT);
+					UWareDB.FencTable.put(bid, proof.getbEncs().get(i));
 					
 					// update the FTIndex
 					fTIndex.updateIndex(initQuery.getfT(), initResults.get(i).getR(), bid);
@@ -393,7 +409,7 @@ public class UWareDedup {
 		return finalResults;
 	}
 
-	private FinalResult dedupFinalCaseOne(BigInteger fCT, InitQuery initQuery, InitResult initResult) {
+	private FinalResult dedupFinalCaseOne(PoWProof proof, InitQuery initQuery, InitResult initResult) {
 		
 		FinalResult finalResult = null;
 		
@@ -401,12 +417,15 @@ public class UWareDedup {
 		
 		FileStatus fileStatus = initResult.getFileStatus();
 		
+		BigInteger fCT = proof.getfCT();
+		
 		if (initResult.getFileStatus() == FileStatus.Fresh) {
 			
 			fid = UWareDedup.newFid++;
 			
 			// update the DB table
-			UWareDB.FCTTable.put(fid, fCT);
+			//UWareDB.FCTTable.put(fid, fCT);
+			UWareDB.FencTable.put(fid, proof.getfEnc());
 			
 			// update the FTIndex
 			fTIndex.updateIndex(initQuery.getfT(), initResult.getR(), fid);
@@ -418,7 +437,16 @@ public class UWareDedup {
 			
 			for (Long testingFid : fidSet) {
 				
-				if (fCT.equals(UWareDB.FCTTable.get(testingFid))) {
+				BigInteger rStar = initResult.getrStar();
+				List<Byte> benc = UWareDB.FencTable.get(testingFid);
+				byte[] fbytes = new byte[benc.size()];
+				for(int k=0; k<benc.size(); k++)
+				{
+					fbytes[k] = benc.get(k);
+				}
+				BigInteger serverFCT = ClientExtension.genStarTag(fbytes, rStar.toByteArray());
+				
+				if (fCT.equals(serverFCT)) {
 					
 					fid = testingFid;
 					fileStatus = FileStatus.Duplicate;
@@ -432,7 +460,8 @@ public class UWareDedup {
 				fid = UWareDedup.newFid++;
 				
 				// update the DB table
-				UWareDB.FCTTable.put(fid, fCT);
+				//UWareDB.FCTTable.put(fid, fCT);
+				UWareDB.FencTable.put(fid, proof.getfEnc());
 				
 				// update the FTIndex
 				fTIndex.updateIndex(initQuery.getfT(), initResult.getR(), fid);
@@ -446,9 +475,11 @@ public class UWareDedup {
 	}
 	
 	
-	private FinalResult dedupFinalCaseThree(List<BigInteger> bCTs, InitQuery initQuery, InitResult initResult) {
+	private FinalResult dedupFinalCaseThree(PoWProof proof, InitQuery initQuery, InitResult initResult) {
 		
 		FinalResult finalResult = null;
+		
+		List<BigInteger> bCTs = proof.getbCTs();
 		
 		long fid = -1;
 		List<Long> bidList = new ArrayList<Long>();
@@ -465,7 +496,8 @@ public class UWareDedup {
 				
 				long newBid = UWareDedup.newBid++;
 				
-				UWareDB.BCTTable.put(newBid, bCTs.get(i));
+				//UWareDB.BCTTable.put(newBid, bCTs.get(i));
+				UWareDB.BencTable.put(newBid, proof.getbEncs().get(i));
 				
 				bidList.add(newBid);
 				dedupList.add(false);
@@ -497,7 +529,17 @@ public class UWareDedup {
 				
 				for (Long oldBid : tempBidList) {
 					
-					BigInteger tempBCT = UWareDB.BCTTable.get(oldBid);
+					BigInteger rStar = initResult.getrStar();
+					List<Byte> benc = UWareDB.BencTable.get(oldBid);
+					byte[] bbytes = new byte[benc.size()];
+					for(int k=0; k<benc.size(); k++)
+					{
+						bbytes[k] = benc.get(k);
+					}
+					BigInteger serverBCT = ClientExtension.genStarTag(bbytes, rStar.toByteArray());
+					
+					//BigInteger tempBCT = UWareDB.BCTTable.get(oldBid);
+					BigInteger tempBCT = serverBCT;
 					
 					if (tempBCT != null) {
 
@@ -512,7 +554,9 @@ public class UWareDedup {
 			
 			Map<BigInteger, Long> bCTsBuffer = new HashMap<BigInteger, Long>();
 			
-			for (BigInteger testingBCT : bCTs) {
+			for (int i=0; i<bCTs.size(); i++) {
+				
+				BigInteger testingBCT = bCTs.get(i);
 				
 				assert(testingBCT != null);
 				
@@ -529,7 +573,8 @@ public class UWareDedup {
 					if (!bCTsBuffer.containsKey(testingBCT)) {
 
 						long newBid = UWareDedup.newBid++;
-						UWareDB.BCTTable.put(newBid, testingBCT);
+						//UWareDB.BCTTable.put(newBid, testingBCT);
+						UWareDB.BencTable.put(newBid, proof.getbEncs().get(i));
 						bidList.add(newBid);
 						dedupList.add(false);
 						TestUWare.t2++;
@@ -579,7 +624,17 @@ public class UWareDedup {
 				
 				for (Long testingBid : tempBidList) {
 					
-					BigInteger tempBCT = UWareDB.BCTTable.get(testingBid);
+					BigInteger rStar = initResult.getrStar();
+					List<Byte> benc = UWareDB.BencTable.get(testingBid);
+					byte[] bbytes = new byte[benc.size()];
+					for(int k=0; k<benc.size(); k++)
+					{
+						bbytes[k] = benc.get(k);
+					}
+					BigInteger serverBCT = ClientExtension.genStarTag(bbytes, rStar.toByteArray());
+					
+					//BigInteger tempBCT = UWareDB.BCTTable.get(testingBid);
+					BigInteger tempBCT = serverBCT;
 					
 					if (tempBCT != null) {
 
@@ -594,7 +649,9 @@ public class UWareDedup {
 			
 			boolean freshOrNot = true;
 			
-			for (BigInteger testingBCT : bCTs) {
+			for (int i=0; i< bCTs.size(); i++) {
+				
+				BigInteger testingBCT = bCTs.get(i);
 				
 				if (tempBCTs.containsKey(testingBCT)) {
 					
@@ -611,7 +668,8 @@ public class UWareDedup {
 					if (!bCTsBuffer.containsKey(testingBCT)) {
 						
 						long newBid = UWareDedup.newBid++;
-						UWareDB.BCTTable.put(newBid, testingBCT);
+						//UWareDB.BCTTable.put(newBid, testingBCT);
+						UWareDB.BencTable.put(newBid, proof.getbEncs().get(i));
 						bidList.add(newBid);
 						dedupList.add(false);
 						

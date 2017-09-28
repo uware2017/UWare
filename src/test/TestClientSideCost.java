@@ -148,7 +148,8 @@ public class TestClientSideCost {
 				
 				long cTime6 = System.nanoTime() - cTime6s;
 
-				PoWProof p1 = new PoWProof(fCT, null);
+				// TODO this test do not use rstar
+				PoWProof p1 = new PoWProof(fCT, null, null, null);
 
 				// block-level and similarity-based dual level
 
@@ -183,7 +184,8 @@ public class TestClientSideCost {
 					blkTagGen += System.nanoTime() - cTime9s;
 				}
 
-				PoWProof p2 = new PoWProof(null, bCTs);
+				//TODO this test do not use rstar
+				PoWProof p2 = new PoWProof(null, null, bCTs,  null);
 				
 				long c1TagGen = cTime1 + cTime6;
 				long c1Enc = cTime5;

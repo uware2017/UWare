@@ -21,6 +21,15 @@ public class ClientExtension {
 				
 		return new BigInteger(rawTag);
 	}
+	
+	public static final BigInteger genStarTag(byte[] data, byte[] rstar) {
+		
+		byte[] rawTag = PRF.HMACSHA256(data, rstar);
+		
+		assert(rawTag != null);
+				
+		return new BigInteger(rawTag);
+	}
 
 	public static final BigInteger genTag(UserFile file) {
 		
@@ -30,6 +39,7 @@ public class ClientExtension {
 				
 		return new BigInteger(rawTag);
 	}
+	
 	
 	public static final BigInteger genTag(FileBlock block) {
 		
