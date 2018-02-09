@@ -20,8 +20,6 @@ public class PRF {
 
     public static final String hashType = "SHA-256";
 
-	//public static final String keyedHashType = "HmacSHA256";
-
 	public static final char[] hexChar = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
     
     public static String toHexString(byte[] b) {
@@ -79,62 +77,21 @@ public class PRF {
     	return c;
     }
 
-    public static byte[] HMACSHA256(byte[] msg, byte[] key) {
+    public static byte[] Sha256DataAndR(byte[] data, byte[] r) {
 
         byte[] digest;
 
-//        try {
-//            Mac sha256_HMAC = Mac.getInstance(keyedHashType);
-//
-//            SecretKey secretKey = new SecretKeySpec(key, keyedHashType);
-//
-//            sha256_HMAC.init(secretKey);
-//
-//            sha256_HMAC.update(msg);
-//
-//            digest = sha256_HMAC.doFinal();
-//
-//
-//        } catch (NoSuchAlgorithmException e) {
-//            e.printStackTrace();
-//            return null;
-//        } catch (InvalidKeyException e) {
-//            e.printStackTrace();
-//            return null;
-//        }
-    	
-    	digest = SHA256(mergeArray(msg,key));
+    	digest = SHA256(mergeArray(data,r));
 
         return digest;
     }
     
-    public static byte[] HMACSHA256(String msg, String key) {
+    public static byte[] Sha256DataAndR(String data, String r) {
 
         byte[] digest;
 
-//        try {
-//
-//            Charset asciiCs = Charset.forName("US-ASCII");
-//
-//            Mac sha256_HMAC = Mac.getInstance(keyedHashType);
-//
-//            SecretKey secretKey = new SecretKeySpec(asciiCs.encode(key).array(), keyedHashType);
-//
-//            sha256_HMAC.init(secretKey);
-//
-//            sha256_HMAC.update(msg.getBytes());
-//
-//            digest = sha256_HMAC.doFinal();
-//
-//        } catch (NoSuchAlgorithmException e) {
-//            e.printStackTrace();
-//            return null;
-//        } catch (InvalidKeyException e) {
-//            e.printStackTrace();
-//            return null;
-//        }
         Charset asciiCs = Charset.forName("US-ASCII");
-        digest = HMACSHA256(asciiCs.encode(msg).array(),asciiCs.encode(key).array());
+        digest = Sha256DataAndR(asciiCs.encode(data).array(),asciiCs.encode(r).array());
         return digest;
     }
 }
