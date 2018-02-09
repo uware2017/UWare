@@ -24,7 +24,7 @@ public class ClientExtension {
 	
 	public static final BigInteger genStarTag(byte[] data, byte[] rstar) {
 		
-		byte[] rawTag = PRF.HMACSHA256(data, rstar);
+		byte[] rawTag = PRF.Sha256DataAndR(data, rstar);
 		
 		assert(rawTag != null);
 				
@@ -76,7 +76,7 @@ public class ClientExtension {
 	
 	public static final byte[] genK(byte[] data, byte[] r) {
 		
-		return PRF.HMACSHA256(data, r);
+		return PRF.Sha256DataAndR(data, r);
 	}
 	
 	public static final byte[] encrypt(byte[] key, byte[] data) {
